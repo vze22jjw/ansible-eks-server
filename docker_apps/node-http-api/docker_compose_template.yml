@@ -1,0 +1,7 @@
+---
+  version: "2"
+  services:
+    node-http-api:           
+      image: ./localhost-image:0.0.1  
+      ports: "9999:19442" 
+      restart: always
