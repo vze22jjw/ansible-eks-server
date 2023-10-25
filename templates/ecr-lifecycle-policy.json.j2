@@ -1,0 +1,30 @@
+{
+  "rules": [
+    {
+      "action": {
+        "type": "expire"
+      },
+      "selection": {
+        "countType": "sinceImagePushed",
+        "countUnit": "days",
+        "countNumber": 1,
+        "tagStatus": "untagged"
+      },
+      "description": "All untagged images will be purged in a day",
+      "rulePriority": 1
+    },
+    {
+      "action": {
+        "type": "expire"
+      },
+      "selection": {
+        "countType": "sinceImagePushed",
+        "countUnit": "days",
+        "countNumber": {{ ecr_lifecycle_expiry_days }},
+        "tagStatus": "any"
+      },
+      "description": "Any image life is no more than {{ ecr_lifecycle_expiry_days }} days",
+      "rulePriority": 2
+    }
+  ]
+}
