@@ -1,0 +1,45 @@
+### derived vars based on some from configs
+- name: Set stack specific facts
+  ansible.builtin.set_fact:
+    region: "{{ eks_service_config.aws_region }}"
+    profile: "{{ eks_service_config.aws_profile }}"
+    cloud: "{{ eks_service_config.cloud | default('aws') }}"
+    vpc_prefix: "eks-service-{{ eks_service_config.eks_service_name }}"
+
+- name: Set dependent facts
+  ansible.builtin.set_fact:
+    admin_instance_type: t4g.nano
+    hostname_prefix_admin: admin
+    service_stack_name: "{{ vpc_prefix }}"
+    microservice_cluster_name: "{{ eks_service_config.eks_service_name }}-eks-cluster"
+    microservice_cluster_version: "{{ eks_service_config.cluster_version|default('1.27') }}"
+    admin_fqdn: "admin-{{ region }}-{{ vpc_prefix|lower }}.{{ base_domain }}"
+    eks_nodegroup_type: "{% if profile is search('prod')%}ON_DEMAND{% else %}SPOT{% endif %}"
+    hostname_suffix: "{{ vpc_prefix|lower }}.{{ region }}.{{ base_domain }}"
+    key_directory: "{{ playbook_dir }}/keys/"
+    vpc_key_name: "vpc-{{ profile }}-{{ region }}-{{ vpc_prefix }}"
+    cidr_block_slash_21: "{{ eks_service_config.vpc_cidr_block_slash_21 }}"
+    
+    ### AMIs
+      ### ami-0df435f331839b2d6 -- AMZ Linux x86 -- al2023-ami-2023.2.20231016.0-kernel-6.1-x86_64
+      ### ami-0b40baa8c6b882e6c -- AMZ lInux Arm -- al2023-ami-2023.2.20231016.0-kernel-6.1-arm64
+    ami_image_name: "{{ eks_service_config.eks_ami_image_name | default('al2023-ami-2023.2.20231016.0-kernel-6.1-x86_64') }}"
+    os_volume_sizes:
+      admin:
+        volume_data_size_gb: 30
+        lvm_home_size_gb: 10
+        lvm_var_size_gb: 5
+        lvm_var_tmp_size_gb: 5
+        lvm_var_log_size_gb: 5
+        lvm_var_log_audit_size_gb: 1
+
+    install_cloudwatch_agent: true
+    cw_loggroup_retention_period: 3
+    log_group_name: "{{ eks_service_config.eks_service_name }}-os-logs-{{ region }}"
+    collect_os_logs:
+      - /var/log/messages
+      - /var/log/secure
+      - /var/log/yum.log
+      - /var/log/sudo.log
+      - /var/log/maillog
+

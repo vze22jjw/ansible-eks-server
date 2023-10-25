@@ -1,0 +1,11 @@
+---
+- hosts: localhost
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Delete EKS Cluster
+      ansible.builtin.debug:
+        msg: Delete EKS Cluster...."
+
+   

@@ -1,0 +1,22 @@
+eks_service_config:
+  aws_account_id: 780535731009
+  eks_service_name: rjackson
+  eks_repo_env: sandbox
+  aws_profile: default
+  aws_region: us-east-1
+  docker_image_name: "node-http-api"
+  docker_image_name_tag: "latest"
+  clean_local_docker_image: true
+
+  ### make true to create, false to delete
+  ecr_create: true
+  ecr_lifecycle_expiry_days: 3
+  ecr_push: true
+  ecr_images_env: sandbox
+  
+  ### for future use below here
+  eks_fargate_profiles: ""
+  create_fargate: true
+  eks_create: true
+  eks_ami_image_name: al2023-ami-2023.2.20231016.0-kernel-6.1-arm64 
+  vpc_cidr_block_slash_21: 10.11.12.0/21

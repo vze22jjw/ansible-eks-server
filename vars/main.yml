@@ -1,0 +1,49 @@
+## list of static vars with some defualts shared accross config files
+stack_type: "manage_eks_service"
+eksctl_version_latest: v0.132.0
+eksctl_version: "{{ eks_service_config.eksctl_version | default(eksctl_version_latest) }}"
+aws_account_id: "{{ eks_service_config.aws_account_id|default('780535731009') }}"
+aws_admin_user: ec2-user
+timezone: Etc/UTC
+eks_repo_env: "{{ eks_service_config.eks_repo_env | default('sandox') }}"
+profile: "{{ eks_service_config.aws_profile|default('default') }}"
+region: "{{ eks_service_config.aws_region|default('us-east-1') }}"
+base_domain: "{{ eks_service_config.base_domain | default('aws.amazon.com') }}"
+docker_image_name: "{{ eks_service_config.docker_image_name }}"
+docker_image_name_tag: "{{ eks_service_config.docker_image_name_tag | default('latest') }}"
+clean_local_docker_image: "{{ eks_service_config.clean_local_docker_image| default(False)| bool }}"
+ansible_python_interpreter_path: "{{ eks_service_config.ansible_python_interpreter_path | default('/usr/local/bin/python3.8') }}"
+eks_service_name: "{{ eks_service_config.eks_service_name | lower }}"
+
+environment_tag: "{{ eks_repo_env }}"
+standard_stack_tags:
+  Environment: "{{ eks_repo_env }}"
+  StackName: "{{ eks_service_name }}"
+  StackType: "{{ stack_type }}"
+
+push_to_s3: "{{ eks_service_config.push_to_s3 | default(false) | lower }}"
+aws_bucket: "{{ eks_service_config.aws_bucket | default('rjackson-default') }}"
+bucket_path: "{{ eks_service_config.bucket_path | default('all_builds/') }}"
+s3_source_path: "{{ eks_service_config.s3_source_path | default('target/') }}"
+
+ecr_push: "{{ eks_service_config.ecr_push | default(false) | lower }}"
+ecr_repo_prefix: "{{ eks_repo_env }}"
+ecr_repo_name: "{{ eks_service_name }}"
+ecr_url: "{{ aws_account_id }}.dkr.ecr.{{ region }}.amazonaws.com/{{ eks_repo_env }}/{{ ecr_repo_name }}"
+ecr_create: "{{ eks_service_config.ecr_create | default(False) |bool }}"
+ecr_lifecycle_expiry_days: "{{ eks_service_config.ecr_lifecycle_expiry_days | default(30) }}"
+eks_node_groups_default: [ small ]
+eks_node_groups: "{{ eks_service_config.eks_node_groups | default(eks_node_gropups_default) }}"
+eks_fargate_profiles: "{{ eks_service_config.eks_fargate_profiles | default(['harness-eks-fargate-profile']) }}"
+create_fargate: "{{ eks_service_config.create_fargate | default(False) | bool }}"
+
+service_name: "{{ ecr_repo_name }}"
+service_identifier: "{{ service_name | regex_replace('[^A-Za-z0-9]', '')}}service"
+
+fargate_selector_config:
+  - "namespace": "harness-builds"
+  - "namespace": "harness-delegate-ng"
+    "labels":
+      "harness.io/name": "delegate"
+  - "namespace": "kube-system"
+

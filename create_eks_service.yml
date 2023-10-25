@@ -1,0 +1,9 @@
+---
+- hosts: localhost
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Create EKS Cluster
+      ansible.builtin.debug:
+        msg: Create EKS Cluster...."

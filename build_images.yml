@@ -1,0 +1,94 @@
+---
+- hosts: localhost
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Set Lifecycle Policy Days to INT 
+      ansible.builtin.set_fact:
+        expiry_days: "{{ ecr_lifecycle_expiry_days | int }}"
+      when: ecr_create
+
+    - name: Creating the ECR Repository
+      community.aws.ecs_ecr:
+        name: "{{ eks_repo_env }}/{{ eks_service_name }}"
+        profile: "{{ profile }}"
+        region: "{{ region }}"
+        registry_id: "{{ aws_account_id }}"
+        state: present             
+        scan_on_push: true
+        lifecycle_policy:
+          rules:
+            - rulePriority: 1
+              description: All untagged images will be purged in a day
+              selection:
+                tagStatus: untagged
+                countType: sinceImagePushed
+                countUnit: days
+                countNumber: 1
+              action:
+                type: expire           
+            - rulePriority: 2
+              description: "Any image life is no more than {{ ecr_lifecycle_expiry_days }} days"
+              selection:
+                tagStatus: any
+                countType: sinceImagePushed
+                countUnit: days
+                #countNumber: '{{ expiry_days }}' ### I'll come back to why this integer is not being passed as such
+                countNumber: 3               
+              action:
+                type: expire                          
+      when: ecr_create
+
+    - name: Delete the ECR Repository
+      community.aws.ecs_ecr:
+        profile: "{{ profile }}"
+        region: "{{ region }}"
+        name: "{{ eks_repo_env }}/{{ eks_service_name }}"
+        registry_id: "{{ aws_account_id }}"
+        force_absent: true
+        state: absent
+      when: not ecr_create
+
+    - name: Docker ECR Login Auth
+      ansible.builtin.shell: "aws ecr get-authorization-token --profile {{ profile }} --region {{ region }}"
+      register: ecr_command
+      when: ecr_create
+
+    - ansible.builtin.set_fact:
+        ecr_authorization_data: "{{ (ecr_command.stdout | from_json).authorizationData[0] }}"
+      when: ecr_create
+  
+    - ansible.builtin.set_fact:
+        ecr_credentials: "{{ (ecr_authorization_data.authorizationToken | b64decode).split(':') }}"
+      when: ecr_create
+
+    - name: docker_repository - Log into ECR registry and force re-authorization
+      community.docker.docker_login:
+        registry_url: "{{ ecr_authorization_data.proxyEndpoint.rpartition('//')[2] }}"
+        username: "{{ ecr_credentials[0] }}"
+        password: "{{ ecr_credentials[1] }}"
+        reauthorize: yes
+      when: ecr_create
+
+    - name: Build image {{ docker_image_name }}
+      community.docker.docker_image:
+        build:
+          path: "{{ playbook_dir }}/docker_apps/{{ docker_image_name }}"
+          pull: true
+          platform: "linux/amd64"
+          args:
+            DNS_HOST: "8.8.8.8,8.8.4.4"
+        name: "{{ ecr_url }}"
+        state: present
+        source: build
+        force_tag: yes
+        push: "{{ ecr_push|bool }}"
+        tag: "{{ docker_image_name }}-{{ docker_image_name_tag }}"
+
+    - name: Remove image from local repo
+      community.docker.docker_image:
+        name: "{{ ecr_url }}"
+        state: absent
+        tag: "{{ docker_image_name }}-{{ docker_image_name_tag }}"
+      when: clean_local_docker_image and ecr_push

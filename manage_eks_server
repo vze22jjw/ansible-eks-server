@@ -1,0 +1,84 @@
+#!/bin/bash
+
+export STACK_TYPE='manage_eks_service'
+export ANSIBLE_SCRIPTS='build_images,create_eks_service,delete_eks_service,'
+export PYTHON_SCRIPTS=''
+export SHELL_SCRIPTS=''
+export INIT_DIR=$(cd -P -- "$(dirname -- "$0")" && printf '%s\n' "$(pwd -P)")
+export HELPER_SCRIPTS_FOLDER=$INIT_DIR/library
+export RUNTIMESTAMP="$(date -u "+%Y%m%dT%H%M%S")"
+GREEN='\e[0;32m'
+NOCOLOR='\033[0m'
+
+### run setup if virtualenv folder does not exists
+if [ ! -d "${INIT_DIR}/.virt_env" ]; then
+    source ${INIT_DIR}/init_setup.sh
+fi
+
+function special_handling()
+{
+    OP=$1
+    case $OP in
+        create_eks_service)
+          export HELPARGS='''{ "helpargs": [
+              { "name": "General Usage",
+               "description": "This is for installing AWS EKS Infrastrucutre.
+                 Example:
+                  ./eks_api_server install_eks_service -m <manage_eks_service_config>"
+             }
+          ]}'''
+          parse_args full
+          export NOTIFICATIONS_FILE="output/notifications_${STACK}_${RUNTIMESTAMP}.txt"
+          EXTRA_PLAYBOOK_ARGS="-e \"{'notifications_filename': '$NOTIFICATIONS_FILE' }\""
+        ;;
+        delete_eks_service)
+          export HELPARGS='''{ "helpargs": [
+              { "name": "General Overview",
+                "description": "This is for deleting infrastructure or EKS.
+                 Example:
+                   ./eks_api_server delete_eks_service -m <manage_eks_service_config>"
+              }
+          ]}'''
+          parse_args full
+          export NOTIFICATIONS_FILE="output/notifications_${STACK}_${RUNTIMESTAMP}.txt"
+          EXTRA_PLAYBOOK_ARGS="-e \"{'notifications_filename': '$NOTIFICATIONS_FILE' }\""
+        ;;
+        build_images)
+          export HELPARGS='''{ "helpargs": [
+              { "name": "General Overview",
+               "description": "This will build docker image and optional push to AWS ECR from local image store.
+                  Example:
+                    ./eks_api_server build_images -m <manage_eks_service_config>"
+              }
+            ]}'''
+            parse_args full
+            export NOTIFICATIONS_FILE="output/notifications_${STACK}_${RUNTIMESTAMP}.txt"
+            EXTRA_PLAYBOOK_ARGS="-e \"{'notifications_filename': '$NOTIFICATIONS_FILE' }\""
+        ;;        
+    esac
+}
+
+function post_processing()
+{
+    OP=$1
+    STACK=$2
+    case $OP in
+    esac
+
+    export NOTIFICATIONS_FILE="output/notifications_${STACK}_${RUNTIMESTAMP}.txt"
+    if [ -e "${NOTIFICATIONS_FILE}" ]; then
+        echo -e "${GREEN}"
+        echo "############################################################################################"
+        echo "Output Notifications"
+        echo "--------------------------------------------------------------------------------------------"
+        cat "${NOTIFICATIONS_FILE}"
+        echo "############################################################################################"
+        echo -e "${NOCOLOR}"
+    fi
+
+}
+
+#######################################################
+# EXECUTE COMMAND
+######################################################
+source "$HELPER_SCRIPTS_FOLDER"/helper_script.sh
