@@ -34,16 +34,4 @@ ecr_create: "{{ eks_service_config.ecr_create | default(False) |bool }}"
 ecr_lifecycle_expiry_days: "{{ eks_service_config.ecr_lifecycle_expiry_days | default(30) | int }}"
 eks_node_groups_default: [ small ]
 eks_node_groups: "{{ eks_service_config.eks_node_groups | default(eks_node_gropups_default) }}"
-eks_fargate_profiles: "{{ eks_service_config.eks_fargate_profiles | default(['harness-eks-fargate-profile']) }}"
 create_fargate: "{{ eks_service_config.create_fargate | default(False) | bool }}"
-
-service_name: "{{ ecr_repo_name }}"
-service_identifier: "{{ service_name | regex_replace('[^A-Za-z0-9]', '')}}service"
-
-fargate_selector_config:
-  - "namespace": "harness-builds"
-  - "namespace": "harness-delegate-ng"
-    "labels":
-      "harness.io/name": "delegate"
-  - "namespace": "kube-system"
-
