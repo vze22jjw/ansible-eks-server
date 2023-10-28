@@ -11,7 +11,7 @@ eks_service_config:
   ### make true to create, false to delete
   ecr_create: true
   ecr_lifecycle_expiry_days: 3
-  ecr_push: false
+  ecr_push: true
   ecr_images_env: sandbox
   
   ### for future use below here
