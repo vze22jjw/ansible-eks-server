@@ -1,24 +1,28 @@
 ### Values below will build configuration of eks server running a created docker image
 eks_service_config:
+  ### EKS cluster values
   aws_account_id: XXXXXXXXXXXXX     ### AWS Account iD
   eks_service_name: mycoolreponame  ### user chosen server name
+  eks_clustername: mycoolercluster  ### EKS clustername and will be used for namespace
   eks_repo_env: int                 ### EKS environment name chosen by user, default is sandbox
   aws_profile: defaulted            ### AWS PROFILE name from credentials files in home directory
-  aws_region: us-east-1             ### AWS region of your choice
+  aws_region: us-east-1             ### AWS region of your choice. If us-east-1 is chosen, EKS cluster will have only 2 AZs and 4 subnets. All other regions will have 3 AZs and 6 subnets.
   docker_image_name: "folder-name-of-docker-project" ### folder name of the local docker files located at /docker_apps
   docker_image_name_tag: "latest"   ### tag name to be added to the end of image name, default is "latest"
   clean_local_docker_image: true    ### clean up local docker images to save some space after a successful push, this value is skipped ecr_push is true
+  base_domain: coldestdomain.ice    ### Your custom domain name here delegated to AWS Route 53 
+  route53_zoneid: Z0XXXXXXXXXXXAMZN  ### This is your AWS Route 53 zone Id of your custom domain
+  eks_worker_instancetype: t3a.medium ### AWS instance type used in EKS node groups of cluster
+  bastion_instancetype: t3a.micro   ### AWS instance types of bastion server to manage EKS cluster
+  eks_clusterversion: "1.23"          ### This is the k8s cluster version that will run on your server, default is 1.27.
+  eks_worker_desiredcount: 2        ### This is the number of eks_worker_instancetype that will be in your cluster, default is 2.
+  eks_worker_mincount: 2            ### This is the minimum number of eks_worker_instancetype that will be in your cluster, default is 2
+  eks_worker_maxcount: 10           ### This is the maximum number of eks_worker_instancetype that will be in your cluster, default is 10
+  eks_cidr_slash_16: 192.168.0.0/16 ### CIDR block to be used for the AWS EKS cluster default value is 192.168.0.0/16.  This value must not overlap other CIDRs in the same AWS account. 
+  eks_service_deploy: true          ### Deploy referenced eks service immediately after infrastructure is deployed, default is false.
 
   ## make true to create, false to delete
   ecr_create: true                  ### mark this value true to create an ECR
   ecr_lifecycle_expiry_days: 3      ### value in days for tagged ecr images to be stored, default is 30
   ecr_push: true                    ### push to an AWS ECR repository, if false local docker image is kept
   ecr_images_env: sandbox           ### ECR environment name chosen by user, default is the same value as eks_repo_env OR sandbox
-
-  ### for future use below here
-  eks_fargate_profiles: ""                                          ### fargate profile setting>>>
-  create_fargate: true                                              ### create farget profile for use with EKS
-  eks_create: true                                                  ### create EKS cluster
-  eks_ami_image_name: al2023-ami-2023.2.20231016.0-kernel-6.1-arm64     ### Public AWS Linux 2 AMI or your own private one
-  vpc_cidr_block_slash_21: 10.11.12.0/21    ### This is a AWS ACcount unique config. We will take this and construct all other subnets needed.
-

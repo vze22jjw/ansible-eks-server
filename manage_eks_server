@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export STACK_TYPE='manage_eks_service'
-export ANSIBLE_SCRIPTS='build_images,create_eks_service,delete_eks_service,'
+export ANSIBLE_SCRIPTS='build_images,create_eks_infra,create_eks_service,delete_eks_infra,delete_eks_service'
 export PYTHON_SCRIPTS=''
 export SHELL_SCRIPTS=''
 export INIT_DIR=$(cd -P -- "$(dirname -- "$0")" && printf '%s\n' "$(pwd -P)")
@@ -19,13 +19,37 @@ function special_handling()
 {
     OP=$1
     case $OP in
-        create_eks_service)
+        create_eks_infra)
           export HELPARGS='''{ "helpargs": [
               { "name": "General Usage",
-               "description": "This is for installing AWS EKS Infrastrucutre.
+               "description": "This is for installing EKS infrastrucutre. Based on config can also be one click service deploy.
                  Example:
-                  ./eks_api_server install_eks_service -m <manage_eks_service_config>"
+                  ./manage_eks_server create_eks_infra -m <manage_eks_service_config>"
              }
+          ]}'''
+          parse_args full
+          export NOTIFICATIONS_FILE="output/notifications_${STACK}_${RUNTIMESTAMP}.txt"
+          EXTRA_PLAYBOOK_ARGS="-e \"{'notifications_filename': '$NOTIFICATIONS_FILE' }\""
+        ;;
+        delete_eks_infra)
+          export HELPARGS='''{ "helpargs": [
+              { "name": "General Overview",
+                "description": "This is for deleting ALL EKS infrastructure and ANY services running on it.
+                 Example:
+                   ./manage_eks_server delete_eks_infra -m <manage_eks_service_config>"
+              }
+          ]}'''
+          parse_args full
+          export NOTIFICATIONS_FILE="output/notifications_${STACK}_${RUNTIMESTAMP}.txt"
+          EXTRA_PLAYBOOK_ARGS="-e \"{'notifications_filename': '$NOTIFICATIONS_FILE' }\""
+        ;;
+        create_eks_service)
+          export HELPARGS='''{ "helpargs": [
+              { "name": "General Overview",
+                "description": "This is for the deploy of an EKS service definition.
+                 Example:
+                   ./manage_eks_server create_eks_service -m <manage_eks_service_config>"
+              }
           ]}'''
           parse_args full
           export NOTIFICATIONS_FILE="output/notifications_${STACK}_${RUNTIMESTAMP}.txt"
@@ -34,9 +58,9 @@ function special_handling()
         delete_eks_service)
           export HELPARGS='''{ "helpargs": [
               { "name": "General Overview",
-                "description": "This is for deleting infrastructure or EKS.
+                "description": "This is for deleting an EKS service leaving EKS infrastructure intact.
                  Example:
-                   ./eks_api_server delete_eks_service -m <manage_eks_service_config>"
+                   ./manage_eks_server delete_eks_service -m <manage_eks_service_config>"
               }
           ]}'''
           parse_args full
@@ -46,9 +70,9 @@ function special_handling()
         build_images)
           export HELPARGS='''{ "helpargs": [
               { "name": "General Overview",
-               "description": "This will build docker image and optional push to AWS ECR from local image store.
+               "description": "This will build docker image and optionally push to AWS ECR from local image store.
                   Example:
-                    ./eks_api_server build_images -m <manage_eks_service_config>"
+                    ./manage_eks_server build_images -m <manage_eks_service_config>"
               }
             ]}'''
             parse_args full

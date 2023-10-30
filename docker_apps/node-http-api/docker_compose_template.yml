@@ -2,6 +2,6 @@
   version: "2"
   services:
     node-http-api:           
-      image: ./localhost-image:0.0.1  
-      ports: "9999:19442" 
-      restart: always
+      image: ./localhost-image:0.0.1  ### image name that is locally stored
+      ports: "19442:8080"             ### host port:container port
+      restart: always                 ### restart container on host boot

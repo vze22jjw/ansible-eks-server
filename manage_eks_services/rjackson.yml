@@ -1,22 +1,28 @@
 eks_service_config:
+  ### EKS cluster values
   aws_account_id: 780535731009
-  eks_service_name: rjackson
+  eks_service_name: eksrj
+  eks_clustername: eksrj
   eks_repo_env: sandbox
   aws_profile: default
   aws_region: us-east-1
+  base_domain: ackshunjackson.click
+  route53_zoneid: Z03862035Q95MSFKBCBN
+  eks_worker_instancetype: t3a.medium
+  bastion_instancetype: t3a.micro
+  eks_clusterversion: "1.27"
+  eks_worker_desiredcount: 2
+  eks_worker_mincount: 2
+  eks_worker_maxcount: 10
+  eks_cidr_slash_16: 10.12.0.0/16
+  eks_service_deploy: true
+
+  ### ECR repo values make true to create, false to delete it along with all images
   docker_image_name: "node-http-api"
   docker_image_name_tag: "latest"
   clean_local_docker_image: true
-
-  ### make true to create, false to delete
-  ecr_create: true
+  ecr_create: false
   ecr_lifecycle_expiry_days: 3
-  ecr_push: true
+  ecr_push: false
   ecr_images_env: sandbox
-  
-  ### for future use below here
-  eks_fargate_profiles: ""
-  create_fargate: true
-  eks_create: true
-  eks_ami_image_name: al2023-ami-2023.2.20231016.0-kernel-6.1-arm64 
-  vpc_cidr_block_slash_21: 10.11.12.0/21
+ 

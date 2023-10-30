@@ -1,0 +1,162 @@
+---
+- name: EKS Demo Kubernetes Service and Cluster Destruction
+  hosts: localhost
+  gather_facts: no
+
+  vars_files:
+    - vars/main.yml
+
+  vars:
+    ansible_ssh_private_key_file: "{{ playbook_dir }}/keys/{{ eks_clustername }}_id_rsa_eks"
+    ansible_user: ec2-user
+
+  vars_prompt:
+    - name: "security_check"
+      prompt: "Do really want to DESTROY your Amazon EKS cluster deployment (yes/no)?"
+      private: no
+  
+  tasks:
+    - name: check if we're gonna destroy
+      when: not security_check | bool
+      fail:
+        msg: cancelled
+
+    - name: import dynamic var data
+      include_vars:
+        dir: "{{ playbook_dir }}//vars/dynamic"
+        ignore_unknown_extensions: True
+        extensions:
+          - yaml
+
+    - name: Get AWS Account Information
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      aws_caller_info:
+      register: caller_info
+
+    - name: delete "{{eks_clustername}}" namespace
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      kubernetes.core.k8s: 
+        state: absent
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{eks_clustername}}"
+    
+    - name: check if eks cluster setup
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      shell: eksctl get cluster --region {{ region }} --verbose 0
+      register: eks_check_output
+
+    - name: remove iamserviceaccounts via eksctl
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      shell: >
+        eksctl delete iamserviceaccount \
+        --name {{ item.name }} \
+        --namespace {{ item.namespace }} \
+        --cluster "{{ eks_clustername }}" \
+        --wait \
+        --region {{ region }}
+      loop:
+        - { name: cluster-autoscaler, namespace: kube-system }
+        - { name: external-dns, namespace: kube-system }
+        - { name: aws-load-balancer-controller, namespace: kube-system }
+        - { name: ebs-csi-controller-sa, namespace: kube-system }
+        - { name: efs-csi-controller-sa, namespace: kube-system }
+        - { name: xray-daemon, namespace: kube-system }
+      when: not eks_check_output.stdout == "No clusters found"
+
+    - name: destroy cloudformation stacks
+      cloudformation:
+        region: "{{ region }}"
+        profile: "{{ aws_profile }}"
+        stack_name: "{{ item }}"
+        state: "absent"
+      loop:
+        - "{{ eks_clustername }}-cluster-autoscaler-policy"
+        - "{{ eks_clustername }}-container-insights-policy"
+        - "{{ eks_clustername }}-external-dns-policy"
+        - "{{ eks_clustername }}-cluster-loadbalancercontroller-policy"
+        - "{{ eks_clustername }}-storage-provider-ebscsi-policy"
+        - "{{ eks_clustername }}-storage-provider-efscsi-policy"
+        - "{{ eks_clustername }}-storage-provider-efscsi-storage"
+
+    - name: check if cert exists on ACM
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      shell: >
+        aws acm list-certificates --region {{ region }} \
+        | jq -r ".CertificateSummaryList | .[] | select (.DomainName == \"{{ base_domain }}\").CertificateArn"
+      register: cert_existing
+
+    - name: read ssl cert name
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      shell: >
+        aws acm describe-certificate --certificate-arn "{{ cert_existing.stdout }}" \
+        --query Certificate.DomainValidationOptions --region {{ region }} | jq -r ".[] | select(.DomainName == \"{{ base_domain }}\").ResourceRecord.Name"
+      register: ssl_cert_name
+      when: cert_existing.stdout
+
+    - name: remove ACM Certfificate
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      shell: >
+        aws acm delete-certificate --region {{ region }} --certificate-arn "{{ cert_existing.stdout }}"
+      when: cert_existing.stdout
+
+    - name : delete record set in route53
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      route53:
+          state: absent
+          zone: "{{ base_domain }}"
+          record: "{{ ssl_cert_name.stdout }}"
+      when: cert_existing.stdout == base_domain
+
+    - name: destroy amazon eks cluster
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      shell: >
+        eksctl delete cluster \
+        --name {{ eks_clustername }} \
+        --region {{ region }} \
+        --wait
+      when: not eks_check_output.stdout == "No clusters found"
+
+    - name: remove bastion host stack
+      cloudformation:
+        region: "{{ region }}"
+        profile: "{{ aws_profile }}"
+        stack_name: "{{ eks_clustername }}-bastion"
+        state: "absent"
+
+    - name: remove ec2 secret key
+      ec2_key:
+        state: absent
+        profile: "{{ aws_profile }}"
+        name: "{{ eks_clustername }}-keypair"
+        region: "{{ region }}"
+
+    - name: find dynamic var files
+      find:
+        paths: "{{ playbook_dir }}/vars/dynamic/"
+        patterns: "*"
+      register: files_to_delete
+
+    - name: remove dynamic var files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      with_items: "{{ files_to_delete.files }}"
+
+    - name: delete local secret file
+      file:
+        path: "{{ playbook_dir }}/keys/{{ eks_clustername }}_id_rsa_eks"
+        state: absent
+
+    - name: Delete the ECR Repository
+      community.aws.ecs_ecr:
+        profile: "{{ aws_profile }}"
+        region: "{{ region }}"
+        name: "{{ eks_repo_env }}/{{ eks_service_name }}"
+        registry_id: "{{ aws_account_id }}"
+        force_absent: true
+        state: absent
+      when: not ecr_create
+    

@@ -7,17 +7,17 @@
     - name: Creating the ECR Repository
       community.aws.ecs_ecr:
         name: "{{ eks_repo_env }}/{{ eks_service_name }}"
-        profile: "{{ profile }}"
+        profile: "{{ aws_profile }}"
         region: "{{ region }}"
         registry_id: "{{ aws_account_id }}"
         state: present             
         scan_on_push: true
-        lifecycle_policy: "{{ lookup('template', 'ecr-lifecycle-policy.json.j2') }}"                     
+        lifecycle_policy: "{{ lookup('template', '{{ playbook_dir }}/templates/ecr-lifecycle-policy.json.j2') }}"                     
       when: ecr_create
 
     - name: Delete the ECR Repository
       community.aws.ecs_ecr:
-        profile: "{{ profile }}"
+        profile: "{{ aws_profile }}"
         region: "{{ region }}"
         name: "{{ eks_repo_env }}/{{ eks_service_name }}"
         registry_id: "{{ aws_account_id }}"
@@ -26,7 +26,7 @@
       when: not ecr_create
 
     - name: Docker ECR Login Auth
-      ansible.builtin.shell: "aws ecr get-authorization-token --profile {{ profile }} --region {{ region }}"
+      ansible.builtin.shell: "aws ecr get-authorization-token --profile {{ aws_profile }} --region {{ region }}"
       register: ecr_command
       when: ecr_create
 

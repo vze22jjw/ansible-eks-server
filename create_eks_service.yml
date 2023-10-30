@@ -1,9 +1,66 @@
 ---
-- hosts: localhost
+- name: Deploy Amazon EKS Service
+  hosts: localhost
+  gather_facts: no
   vars_files:
     - vars/main.yml
+  
+  vars: 
+    ansible_ssh_private_key_file: "{{ playbook_dir }}/keys/{{ eks_clustername }}_id_rsa_eks"
+    ansible_user: ec2-user
 
   tasks:
-    - name: Create EKS Cluster
+    - name: import dynamic var data
+      include_vars:
+        dir: "{{ playbook_dir }}/vars/dynamic"
+        ignore_unknown_extensions: True
+        extensions:
+          - yaml
+
+    - name: Get AWS Account Information
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      aws_caller_info:
+      register: caller_info  
+
+    - name: create "{{ eks_clustername }}" namespace
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      kubernetes.core.k8s: 
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ eks_clustername }}"
+
+    - name: create "{{ eks_clustername }}" deployment
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      kubernetes.core.k8s:    
+        state: present
+        apply: yes
+        definition: "{{ lookup('template', '{{ playbook_dir }}/microservices/{{ docker_image_name }}/{{ item }}.manifest.yaml') | from_yaml }}"
+      loop:
+        - deploy
+        - service
+        - alb-ingress
+
+    - name: sleep for 3 minutes before checking EKS service url? -- https://{{ eks_microservice_url }}/health
+      delegate_to: localhost  
+      ansible.builtin.wait_for:
+        timeout: 180
+
+    - name: Check eks service URL for successfuly deploy -- https://{{ eks_microservice_url }}/health
+      delegate_to: localhost  
+      ansible.builtin.uri:
+        url: "https://{{ eks_microservice_url }}/health"
+        method: GET
+        status_code: [ 200,301 ]
+        return_content: yes
+      ignore_errors: false
+      delegate_to: localhost  
+      register: eks_url_content
+    
+    - name: eks url healthcheck content -- Output
+      delegate_to: localhost  
       ansible.builtin.debug:
-        msg: Create EKS Cluster...."
+        msg: "Output from url check is : {{ eks_url_content.content }}"
+  

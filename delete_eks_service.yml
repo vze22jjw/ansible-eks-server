@@ -1,11 +1,44 @@
 ---
-- hosts: localhost
+- name: EKS Demo Kubernetes Service and Cluster Destruction
+  hosts: localhost
+  gather_facts: no
+
   vars_files:
     - vars/main.yml
 
-  tasks:
-    - name: Delete EKS Cluster
-      ansible.builtin.debug:
-        msg: Delete EKS Cluster...."
+  vars:
+    ansible_ssh_private_key_file: "{{ playbook_dir }}/keys/{{ eks_clustername }}_id_rsa_eks"
+    ansible_user: ec2-user
 
-   
+  vars_prompt:
+    - name: "security_check"
+      prompt: "Do really want to DESTROY your Amazon EKS service deployment (yes/no)?"
+      private: no
+  
+  tasks:
+    - name: check if we're gonna destroy
+      when: not security_check | bool
+      fail:
+        msg: cancelled
+
+    - name: import dynamic var data
+      include_vars:
+        dir: "{{ playbook_dir }}/vars/dynamic"
+        ignore_unknown_extensions: True
+        extensions:
+          - yaml
+
+    - name: Get AWS Account Information
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      aws_caller_info:
+      register: caller_info
+
+    - name: delete "{{eks_clustername}}" namespace
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      kubernetes.core.k8s: 
+        state: absent
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{eks_clustername}}"

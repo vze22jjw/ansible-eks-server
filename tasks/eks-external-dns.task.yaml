@@ -1,0 +1,42 @@
+#############################################################
+## NOT FOR PRODUCTION USE.                                 ##
+## THE CONTENT OF THIS FILE IS FOR LEARNING PURPOSES ONLY  ##
+## created by David Surey, Amazon Web Services, 2020       ##
+#############################################################
+
+- name: create Roles and Policies for cluster-autoscaler
+  cloudformation:
+    profile: "{{ aws_profile }}"
+    stack_name: "{{ eks_clustername }}-external-dns-policy"
+    state: present
+    region: "{{ region }}"
+    template: "{{ playbook_dir }}/templates/eks-external-dns-iam.template.yaml"
+
+- name: setup service account for external-dns
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  shell: >
+    eksctl  create iamserviceaccount \
+    --name external-dns \
+    --namespace kube-system \
+    --cluster "{{ eks_clustername }}" \
+    --attach-policy-arn "arn:aws:iam::{{ caller_info.account }}:policy/EKSExternalDNSPolicy" \
+    --approve \
+    --region {{ region }} \
+    --override-existing-serviceaccounts
+
+- name: add the external-dns helm repo
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  kubernetes.core.helm_repository:
+    name: external-dns
+    repo_url: "https://kubernetes-sigs.github.io/external-dns/"
+
+- name: Deploy latest version of the external-dns chart inside kube-system namespace
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  kubernetes.core.helm:
+    name: external-dns
+    chart_ref: external-dns/external-dns
+    release_namespace: kube-system
+    values: 
+      serviceAccount:
+        create: false 
+        name: external-dns

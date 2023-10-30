@@ -1,0 +1,43 @@
+#############################################################
+## NOT FOR PRODUCTION USE.                                 ##
+## THE CONTENT OF THIS FILE IS FOR LEARNING PURPOSES ONLY  ##
+## created by David Surey, Amazon Web Services, 2020       ##
+#############################################################
+
+- name: create Policies for cluster-autoscaler
+  cloudformation:
+    profile: "{{ aws_profile }}"
+    stack_name: "{{ eks_clustername }}-cluster-autoscaler-policy"
+    state: present
+    region: "{{ region }}"
+    template: "{{ playbook_dir }}/templates/eks-cluster-autoscaler-iam.template.yaml"
+
+- name: setup service account for cluster-autoscaler
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  shell: >
+    eksctl  create iamserviceaccount \
+    --name cluster-autoscaler \
+    --namespace kube-system \
+    --cluster "{{ eks_clustername }}" \
+    --attach-policy-arn "arn:aws:iam::{{ caller_info.account }}:policy/EKSClusterAutoscalerPolicy" \
+    --approve \
+    --region {{ region }} \
+    --override-existing-serviceaccounts
+
+- name: add the cluster-autoscaler helm repo
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  kubernetes.core.helm_repository:
+    name: autoscaler
+    repo_url: "https://kubernetes.github.io/autoscaler"
+
+- name: Deploy latest version of the cluster-autoscaler chart inside kube-system namespace
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  kubernetes.core.helm:
+    name: cluster-autoscaler
+    chart_ref: autoscaler/cluster-autoscaler 
+    release_namespace: kube-system
+    values: 
+      clusterName: "{{ eks_clustername }}"
+      serviceAccount:
+        create: false 
+        name: cluster-autoscaler

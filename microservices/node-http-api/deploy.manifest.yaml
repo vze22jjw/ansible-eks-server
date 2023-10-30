@@ -1,0 +1,24 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ eks_clustername }}-nodejs-deployment"
+  namespace: "{{ eks_clustername }}"
+  labels:
+    app: "{{ eks_clustername }}-nodejs"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: "{{ eks_clustername }}-nodejs"
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: "{{ eks_clustername }}-nodejs"
+    spec:
+      containers:
+        - name: "{{ eks_clustername }}-nodejs"
+          image: "{{ ecr_url }}:{{ docker_image_name }}-{{ docker_image_name_tag }}"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80

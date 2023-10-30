@@ -1,5 +1,0 @@
----
-- hosts: localhost
-  gather_facts: no
-  vars_files:
-      - vars/main.yml

@@ -1,0 +1,47 @@
+#############################################################
+## NOT FOR PRODUCTION USE.                                 ##
+## THE CONTENT OF THIS FILE IS FOR LEARNING PURPOSES ONLY  ##
+## created by David Surey, Amazon Web Services, 2020       ##
+#############################################################
+
+- name: setup service account for x-ray
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  shell: >
+    eksctl  create iamserviceaccount \
+    --name xray-daemon \
+    --namespace kube-system \
+    --cluster "{{ eks_clustername }}" \
+    --attach-policy-arn arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess \
+    --approve \
+    --region {{ region }} \
+    --override-existing-serviceaccounts
+
+- name: label the xray service-account 
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  shell: > 
+    kubectl label serviceaccount xray-daemon app=xray-daemon -n kube-system --overwrite
+
+- name: Download cloudwatch insights manifests to the cluster
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch-container-insights/master/k8s-deployment-manifest-templates/deployment-mode/daemonset/cwagent-fluentd-xray/cwagent-fluentd-xray-quickstart.yaml
+    dest: ~/cwagent-fluentd-xray-quickstart.yaml
+    mode: '0664'
+
+- name: Replace variables with values
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  ansible.builtin.replace:
+    path: ~/cwagent-fluentd-xray-quickstart.yaml
+    regexp: "{{ item.key }}"
+    replace: "{{ item.value }}"
+  loop: "{{ replace_data | dict2items }}"
+  vars: 
+    replace_data: 
+      '\{\{cluster_name\}\}': "'{{ eks_clustername }}'"
+      '\{\{region_name\}\}': "'{{ region }}'"
+
+- name: Apply the container insights manifest to the cluster.
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  kubernetes.core.k8s:
+    state: present
+    src: ~/cwagent-fluentd-xray-quickstart.yaml

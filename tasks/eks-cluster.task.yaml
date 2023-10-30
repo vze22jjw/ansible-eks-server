@@ -1,0 +1,55 @@
+#############################################################
+## NOT FOR PRODUCTION USE.                                 ##
+## THE CONTENT OF THIS FILE IS FOR LEARNING PURPOSES ONLY  ##
+## created by David Surey, Amazon Web Services, 2020       ##
+#############################################################
+
+- name: check if eks cluster setup
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  shell: eksctl  get cluster --region {{ region }} --verbose 0
+  register: eks_check_output
+  retries: 6
+  delay: 10
+  until: "eks_check_output is not failed"
+
+- name: create the eks cluster -- this may take up to 30 min
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  shell: >
+    eksctl  create cluster \
+    --name {{ eks_clustername }} \
+    --version {{ eks_clusterversion }} \
+    --region {{ region }} \
+    --nodegroup-name {{ eks_clustername }}-linux-nodes \
+    --node-type {{ eks_worker_instancetype }} \
+    --nodes-min {{ eks_worker_mincount }} \
+    --nodes-max {{ eks_worker_maxcount }} \
+    --vpc-cidr {{ eks_cidr_slash_16 }} \
+    --managed
+  when: eks_check_output.stdout == "No clusters found"
+
+- name: write the kube config
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  shell: >
+    eksctl  utils write-kubeconfig \
+    --cluster {{ eks_clustername }} \
+    --region {{ region }}
+  when: not eks_check_output.stdout == "No clusters found"
+
+- name: add the oidc provider for iam
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  shell: >
+    eksctl  utils associate-iam-oidc-provider \
+    --cluster {{ eks_clustername }} \
+    --region {{ region }} \
+    --approve
+  when: eks_check_output.stdout == "No clusters found"
+
+- name: enable cloudwatch logging
+  delegate_to: "{{ EKSBastionInstancePublicIP }}"
+  shell: >
+    eksctl  utils update-cluster-logging \
+    --cluster {{ eks_clustername }} \
+    --enable-types all \
+    --approve \
+    --region {{ region }}
+  when: eks_check_output.stdout == "No clusters found"

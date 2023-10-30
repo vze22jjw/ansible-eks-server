@@ -1,0 +1,59 @@
+---
+- name: Setup and Customize Amazon EKS and EKS Service
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - vars/main.yml
+  
+  vars: 
+    ansible_ssh_private_key_file: "{{ playbook_dir }}/keys/{{ eks_clustername }}_id_rsa_eks"
+    ansible_user: ec2-user
+
+  tasks:    
+    - name: setup bastion host
+      include_tasks: "{{ playbook_dir }}/tasks/bastion.task.yaml"
+
+    - name: import dynamic var data
+      include_vars:
+        dir: "{{ playbook_dir }}/vars/dynamic"
+        ignore_unknown_extensions: True
+        extensions:
+          - yaml
+
+    - name: wait for the bastion to be booted and bootstraped (first-start)
+      ansible.builtin.wait_for:
+        host: "{{ EKSBastionInstancePublicIP }}"
+        port: 22
+        timeout: 300
+        delay: 120
+      when: bastion_informations.changed
+
+    - name: Get AWS Account Information
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      aws_caller_info:
+      register: caller_info
+      retries: 20
+      delay: 10
+      until: "caller_info is not failed"
+
+    - name: setup the EKS Cluster and additional extensions of the cluster infrastructure
+      include_tasks: "{{ item }}"
+      loop:
+        - "{{ playbook_dir }}/tasks/eks-cluster.task.yaml"
+        - "{{ playbook_dir }}/tasks/eks-storage-provider-ebscsi.task.yaml"
+        - "{{ playbook_dir }}/tasks/eks-storage-provider-efscsi.task.yaml"
+        - "{{ playbook_dir }}/tasks/eks-container-insights.task.yaml"
+        - "{{ playbook_dir }}/tasks/eks-cluster-autoscaler.task.yaml"
+        - "{{ playbook_dir }}/tasks/eks-loadbalancer-controller.task.yaml"
+        - "{{ playbook_dir }}/tasks/eks-external-dns.task.yaml"
+        - "{{ playbook_dir }}/tasks/eks-metrics-server.task.yaml"
+        - "{{ playbook_dir }}/tasks/eks-xray.task.yaml"
+        - "{{ playbook_dir }}/tasks/acm.task.yaml"
+
+- name: build and deploy Docker image
+  ansible.builtin.import_playbook: build_images.yml
+  when: eks_service_deploy
+
+- name: deploy EKS service 
+  ansible.builtin.import_playbook: create_eks_service.yml
+  when: eks_service_deploy
