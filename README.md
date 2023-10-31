@@ -82,4 +82,4 @@ Tech Debt:
  - make ALL calls to helm locked to versions to ensure consistent installs between environments
  - make bastion an AMI with baked in requiremnts to also ensure consistent installs between environments
  - turn hardcoded INT values into variables for greater control
- - CloudWatch Log groups are NOT deleted with this.  As a best practice your data retention policy should be separate and there is value and viewing logs long after infrastrutre is deleted.  Be sure to delete these in cloudwatch when ready though cost for these logs are minimal.
+ - CloudWatch Log groups are NOT deleted with this.  As a best practice your data retention policy should be separate and there is value and viewing logs long after infrastrutre is deleted.  Be sure to delete these in cloudwatch when ready though cost for storage of these logs are minimal. Cost for ingestion of these logs are not.  Perhaps try to minimize logging or consider another logging solution.
