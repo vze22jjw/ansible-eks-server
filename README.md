@@ -39,9 +39,16 @@ This repository is for managing a AWS EKS service platform. The goal being that 
     * Be sure NOT to make changes to ANY values that are NOT ```true/false``` between runs of this script or the script will not be able to cleanup properly. 
     * Example, changing the ```eks_service_name``` bewtween runs will no longer manage the previous ```eks_service_name``` and the OLD service will be added to the cluster rather than replaced.
 
-2. Add your complete docker file directory with a valid Dockerfile in directory /docker_apps.  Please use dashes in directory name NOT underscores for consistency.
+2. Add your complete docker file directory with a valid Dockerfile in directory ```./docker_apps``.  Please use dashes in directory name NOT underscores for consistency.
 
-3. Any run of the script without all needed args will display help message like:
+3. Add your own microservice deploymnt files that is the SAME name as the above ```./docker_apps/my_docker_dirname ``` in the directory ```./microservices/my_docker_dirname```. Please use dashes in directory name NOT underscores for consistency. These files should be named:
+    * alb-ingress.manifest.yaml --- this is external DNS name and loadbalancer that service would be reached on.
+    * deploy.manifest.yaml --- this is the k8s deployment and should define where the image should be downloaded from.
+    * service.manifest.yaml --- this is the k8s service definition.
+  
+  * Please see directory ```./microservices\node-http-api``` for examples of how your service should be configured.  
+
+4. Any run of the script without all needed args will display help message like:
 
     ```
     usage: ./manage_eks_server [-h] build_images -m manage_eks_service
