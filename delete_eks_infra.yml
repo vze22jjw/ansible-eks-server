@@ -110,7 +110,7 @@
           record: "{{ ssl_cert_name.stdout }}"
       when: cert_existing.stdout == base_domain
 
-    - name : delete AWS EKS cluster TXT type records in route53 -- NOT A record created by k8s
+    - name : delete AWS EKS cluster TXT type records in route53 -- NOT 'A' record created by k8s
       delegate_to: "{{ EKSBastionInstancePublicIP }}"
       route53:
           state: absent
