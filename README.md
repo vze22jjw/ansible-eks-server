@@ -113,6 +113,7 @@ This repository is for managing a AWS EKS service platform. The goal being that 
  - Route 53 alb alias A record related to cluster are not deleted
  - turn hardcoded integer values into variables for greater control
  - CloudWatch Log groups can be deleted with this.  As a best practice your data retention policy should be separate and there is value and viewing logs long after infrastrutre is deleted.  Be sure to delete these in cloudwatch when ready though cost for storage of these logs are minimal. Cost for ingestion of these logs are not.  Perhaps try to minimize logging or consider another logging solution.
+ - EFS storage templates should be consildated into one with a jinja loop
 
 ### Troubleshooting
   - If you encounter erros during the script run, re-running the same command usually works.  Ansible will keep infrastructure in the desired state based on the command run and will skip already configured items.
