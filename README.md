@@ -43,7 +43,7 @@ This repository is for managing a AWS EKS service platform. The goal being that 
     * Be sure NOT to make changes to ANY values that are NOT ```true/false``` between runs of this script or the script will not be able to manage or cleanup properly. 
     * Example, changing the ```eks_service_name``` bewtween runs will no longer manage the previous ```eks_service_name``` and the OLD service will be added to the cluster rather than replaced.
 
-2. Add your complete docker file directory with a valid Dockerfile in directory ```./docker_apps/my-docker-dirname``.  Please use dashes in directory name NOT underscores for consistency.
+2. Add your complete docker file directory with a valid Dockerfile in directory ```./docker_apps/my-docker-dirname```.  Please use dashes in directory name NOT underscores for consistency.
 
 3. Add your own microservice deploymnt files that is the SAME name as the above ```./docker_apps/my-docker-dirname ``` in the directory ```./microservices/my-docker-dirname```. Please use dashes in directory name NOT underscores for consistency. These files should be named:
     * alb-ingress.manifest.yaml --- this is external DNS name and loadbalancer that service would be reached on.
@@ -64,7 +64,7 @@ This repository is for managing a AWS EKS service platform. The goal being that 
 ### One click build and deploy
  `./manage_eks_server create_eks_infra -m <manage_eks_service_config>" `
   
-  - This command combined with the some config values will build container, install infrastructure and deploy eks server. Ensure the following values are, ```"true"``` in your config.  This install can take up to 40 minutes.
+  - This command combined with the some config values will build container, install infrastructure and deploy eks service. Ensure the following values are, ```"true"``` in your config.  This install can take up to 40 minutes.
     - create_ecr: true
     - ecr_push: true
     - eks_service_deploy: true
@@ -88,7 +88,7 @@ This repository is for managing a AWS EKS service platform. The goal being that 
 ##### Deploy EKS Service
  `./manage_eks_server create_eks_service -m <manage_eks_service_config>"`
 
-  - This will deploy a service to an existing EKS cluster.  The command "create_eks_infra" should be run before this to ensure that cluster exists before deploy.
+  - This will deploy a service to an existing EKS cluster.  The command ```"create_eks_infra"``` should be run before this to ensure that cluster exists before deploy.
 
 ##### Delete EKS Service or Namespace
   `./manage_eks_server delete_eks_service -m <manage_eks_service_config>"`
