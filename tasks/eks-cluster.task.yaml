@@ -12,7 +12,7 @@
   delay: 10
   until: "eks_check_output is not failed"
 
-- name: create the eks cluster -- this may take up to 30 min
+- name: create the eks cluster -- this may take 20 mins or more
   delegate_to: "{{ EKSBastionInstancePublicIP }}"
   shell: >
     eksctl  create cluster \

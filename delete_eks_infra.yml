@@ -102,13 +102,24 @@
         aws acm delete-certificate --region {{ region }} --certificate-arn "{{ cert_existing.stdout }}"
       when: cert_existing.stdout
 
-    - name : delete record set in route53
+    - name : delete AWS ACM record set in route53
       delegate_to: "{{ EKSBastionInstancePublicIP }}"
       route53:
           state: absent
           zone: "{{ base_domain }}"
           record: "{{ ssl_cert_name.stdout }}"
       when: cert_existing.stdout == base_domain
+
+    - name : delete AWS EKS cluster TXT type records in route53 -- NOT A record created by k8s
+      delegate_to: "{{ EKSBastionInstancePublicIP }}"
+      route53:
+          state: absent
+          zone: "{{ base_domain }}"
+          record: "{{ item.record }}"
+          type: "{{ item.type }}"
+      loop:
+        - { record: '{{ eks_microservice_url }}', type: TXT }
+        - { record: 'cname-{{ eks_microservice_url }}', type: TXT }
 
     - name: destroy amazon eks cluster
       delegate_to: "{{ EKSBastionInstancePublicIP }}"
@@ -159,4 +170,22 @@
         force_absent: true
         state: absent
       when: not ecr_create
+
+    - name: Remove image from local repo
+      community.docker.docker_image:
+        name: "{{ ecr_url }}"
+        state: absent
+        tag: "{{ docker_image_name }}-{{ docker_image_name_tag }}"
+      when: not keep_local_docker_image and not ecr_push
+
+    - name: Delete AWS CloudWatch log groups for EKS cluster
+      amazon.aws.cloudwatchlogs_log_group:
+        state: absent
+        log_group_name: "{{ item }}"
+      loop:
+        - "/aws/containerinsights/{{ eks_clustername }}/application"
+        - "/aws/containerinsights/{{ eks_clustername }}/dataplane"
+        - "/aws/containerinsights/{{ eks_clustername }}/host"
+        - "/aws/eks/{{ eks_clustername }}/cluster"
+      when: eks_delete_logs   
     

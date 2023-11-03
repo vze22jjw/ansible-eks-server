@@ -33,7 +33,7 @@
     region: "{{ region }}"
     template: "{{ playbook_dir }}/templates/eks-storage-provider-efscsi-iam.template.yaml"
 
-- name: create efs storage for efs csi in region us-east-1
+- name: create efs storage for efs csi in region us-east-1 -- 2 mount points when us-east-1
   cloudformation:
     profile: "{{ aws_profile }}"
     stack_name: "{{ eks_clustername }}-storage-provider-efscsi-storage"
@@ -47,7 +47,7 @@
   register: efs_filesystem
   when: region is search("us-east-1")
 
-- name: create efs storage for efs csi in region {{ region }}
+- name: create efs storage for efs csi in region {{ region }} -- 3 mounts points when NOT us-east-1
   cloudformation:
     profile: "{{ aws_profile }}"
     stack_name: "{{ eks_clustername }}-storage-provider-efscsi-storage"

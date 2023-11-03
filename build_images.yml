@@ -66,4 +66,4 @@
         name: "{{ ecr_url }}"
         state: absent
         tag: "{{ docker_image_name }}-{{ docker_image_name_tag }}"
-      when: clean_local_docker_image and not ecr_push
+      when: not keep_local_docker_image and not ecr_push

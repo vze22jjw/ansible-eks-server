@@ -19,16 +19,19 @@
     --query CertificateArn --region {{ region }} --output text
   when: cert_existing.stdout == ""
 
-- name: get cert arn on ACM
+- name: get cert arn on ACM for 30 seconds 
   delegate_to: "{{ EKSBastionInstancePublicIP }}"
   shell: > 
     aws acm list-certificates --region {{ region }} \
     | jq -r '.CertificateSummaryList | .[] | select (.DomainName == "{{ base_domain }}").CertificateArn'
   register: cert_arn
+  retries: 5
+  delay: 5
+  until: "'arn:aws:acm:' in cert_arn.stdout"
 
-- name: waiting some seconds cause of AWS ACM latency
-  pause: 
-    seconds: 20
+- name: check ssl certificate list output before continue
+  debug:
+    msg: "{{ cert_arn.stdout }}"
     
 - name: read ssl cert name
   delegate_to: "{{ EKSBastionInstancePublicIP }}"

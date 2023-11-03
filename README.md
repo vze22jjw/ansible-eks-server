@@ -11,6 +11,10 @@ This repository is for managing a AWS EKS service platform. The goal being that 
 
 ### Prerequisites for the playbook
 * A linux environment like ubuntu, debian or redhat with admin access
+* docker - ensure that the docker daemon is running for your OS distribution. Please check documentation for installing for your host system.
+  ```
+  https://docs.docker.com/engine/install/
+  ```
 * Disk Space - docker image files which can be quite large, in some cases ~2GB +
 * python3.9.5 or later
   ```
@@ -36,17 +40,17 @@ This repository is for managing a AWS EKS service platform. The goal being that 
 ### Local Setup and Deploy
 1. Make copy of the template file in directory manage_eks_services/template.yml and change the relevant values needed for your configuration.  The template file contains definitions of needed vars and thier use.
 
-    * Be sure NOT to make changes to ANY values that are NOT ```true/false``` between runs of this script or the script will not be able to cleanup properly. 
+    * Be sure NOT to make changes to ANY values that are NOT ```true/false``` between runs of this script or the script will not be able to manage or cleanup properly. 
     * Example, changing the ```eks_service_name``` bewtween runs will no longer manage the previous ```eks_service_name``` and the OLD service will be added to the cluster rather than replaced.
 
-2. Add your complete docker file directory with a valid Dockerfile in directory ```./docker_apps``.  Please use dashes in directory name NOT underscores for consistency.
+2. Add your complete docker file directory with a valid Dockerfile in directory ```./docker_apps/my-docker-dirname``.  Please use dashes in directory name NOT underscores for consistency.
 
-3. Add your own microservice deploymnt files that is the SAME name as the above ```./docker_apps/my_docker_dirname ``` in the directory ```./microservices/my_docker_dirname```. Please use dashes in directory name NOT underscores for consistency. These files should be named:
+3. Add your own microservice deploymnt files that is the SAME name as the above ```./docker_apps/my-docker-dirname ``` in the directory ```./microservices/my-docker-dirname```. Please use dashes in directory name NOT underscores for consistency. These files should be named:
     * alb-ingress.manifest.yaml --- this is external DNS name and loadbalancer that service would be reached on.
     * deploy.manifest.yaml --- this is the k8s deployment and should define where the image should be downloaded from.
     * service.manifest.yaml --- this is the k8s service definition.
   
-  * Please see directory ```./microservices\node-http-api``` for examples of how your service should be configured.  
+  * Please see directory ```./microservices/node-http-api``` for examples of how your service should be configured.  
 
 4. Any run of the script without all needed args will display help message like:
 
@@ -55,10 +59,12 @@ This repository is for managing a AWS EKS service platform. The goal being that 
     ./manage_eks_server: error: the following arguments are required: -m/--manage_eks_service
     ```
 
+5. Output of script provides status and error if any via standard ouput
+
 ### One click build and deploy
  `./manage_eks_server create_eks_infra -m <manage_eks_service_config>" `
   
-  - This command combined with the some config values will build container, install infrastructure and deploy eks server. Ensure the following values are, ```"true"``` in your config.
+  - This command combined with the some config values will build container, install infrastructure and deploy eks server. Ensure the following values are, ```"true"``` in your config.  This install can take up to 40 minutes.
     - create_ecr: true
     - ecr_push: true
     - eks_service_deploy: true
@@ -67,7 +73,7 @@ This repository is for managing a AWS EKS service platform. The goal being that 
 ##### Build Docker Image
   `./manage_eks_server build_images -m <manage_eks_service_config>"`
 
-  - This will build and optionally deply a docker image to an ECR repo.  Please ensure the following values are defined as true:
+  - This will build and optionally push a docker image to an ECR repo.  Please ensure the following values are defined as true:
     - create_ecr: true
     - ecr_push: true
 
@@ -87,20 +93,35 @@ This repository is for managing a AWS EKS service platform. The goal being that 
 ##### Delete EKS Service or Namespace
   `./manage_eks_server delete_eks_service -m <manage_eks_service_config>"`
 
-  - This will delete an EKS service and leave EKS cluster infrastruture untouched.
+  - This will delete an EKS service and leave EKS cluster infrastruture untouched. You must confirm deletion via command prompt.
 
 ##### Delete EKS Cluster and All infrastructure
   `./manage_eks_server delete_eks_infra -m <manage_eks_service_config>"`
 
-  - This will delete ALL EKS service and leave EKS cluster infrastruture untouched. Unsure the following config values are set to false to als delete AWS ECR and local docker images:
+  - This will delete ALL AWS services. You must confirm deletion via command prompt. Ensure the following config values are set to the following to also delete AWS ECR and local docker images:
     - create_ecr: false
     - ecr_push: false
     - eks_service_deploy: false
-    - clean_local_docker_image: true
-
+    - keep_local_docker_image: false
+    - eks_delete_logs: true 
 
 ### Tech Debt:
  - make ALL calls to helm locked to versions to ensure consistent installs between environments
  - make bastion an AMI with baked in requiremnts to also ensure consistent installs between environments
- - turn hardcoded INT values into variables for greater control
- - CloudWatch Log groups are NOT deleted with this.  As a best practice your data retention policy should be separate and there is value and viewing logs long after infrastrutre is deleted.  Be sure to delete these in cloudwatch when ready though cost for storage of these logs are minimal. Cost for ingestion of these logs are not.  Perhaps try to minimize logging or consider another logging solution.
+ - bastion host should use internal DNS rather than IP stored locally.
+ - Security Groups shold be locked down to users desired IP or behind Corporate VPN
+ - Route 53 alb alias A record related to cluster are not deleted
+ - turn hardcoded integer values into variables for greater control
+ - CloudWatch Log groups can be deleted with this.  As a best practice your data retention policy should be separate and there is value and viewing logs long after infrastrutre is deleted.  Be sure to delete these in cloudwatch when ready though cost for storage of these logs are minimal. Cost for ingestion of these logs are not.  Perhaps try to minimize logging or consider another logging solution.
+
+### Troubleshooting
+  - If you encounter erros during the script run, re-running the same command usually works.  Ansible will keep infrastructure in the desired state based on the command run and will skip already configured items.
+  - You may have need to check logs for the cluster they are exported in CloudWatch log groups. Depending on you cluster name you can find them with names:
+    - "/aws/containerinsights/{{ eks_clustername }}/application"
+    - "/aws/containerinsights/{{ eks_clustername }}/dataplane"  
+    - "/aws/containerinsights/{{ eks_clustername }}/host"
+    - "/aws/eks/{{ eks_clustername }}/cluster"
+
+  - There are some states that AWS Cloudformation can no longer be updated.  Some of these states can be found at url:
+    -  https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/troubleshooting.html#troubleshooting-errors-nested-stacks-are-stuck
+

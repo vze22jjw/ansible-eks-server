@@ -9,7 +9,7 @@ eks_service_config:
   aws_region: us-east-1             ### AWS region of your choice. If us-east-1 is chosen, EKS cluster will have only 2 AZs and 4 subnets. All other regions will have 3 AZs and 6 subnets.
   docker_image_name: "folder-name-of-docker-project" ### folder name of the local docker files located at /docker_apps
   docker_image_name_tag: "latest"   ### tag name to be added to the end of image name, default is "latest"
-  clean_local_docker_image: true    ### clean up local docker images to save some space after a successful push, this value is skipped ecr_push is true
+  keep_local_docker_image: true     ### clean up local docker images to save some space after a successful push, default is true.
   base_domain: coldestdomain.ice    ### Your custom domain name here delegated to AWS Route 53 
   route53_zoneid: Z0XXXXXXXXXXXAMZN  ### This is your AWS Route 53 zone Id of your custom domain
   eks_worker_instancetype: t3a.medium ### AWS instance type used in EKS node groups of cluster
@@ -20,6 +20,7 @@ eks_service_config:
   eks_worker_maxcount: 10           ### This is the maximum number of eks_worker_instancetype that will be in your cluster, default is 10
   eks_cidr_slash_16: 192.168.0.0/16 ### CIDR block to be used for the AWS EKS cluster default value is 192.168.0.0/16.  This value must not overlap other CIDRs in the same AWS account. 
   eks_service_deploy: true          ### Deploy referenced eks service immediately after infrastructure is deployed, default is false.
+  eks_delete_logs: false            ### Delete AWS CloudWatch log_groups related to EKS cluster, default is false.
 
   ## make true to create, false to delete
   ecr_create: true                  ### mark this value true to create an ECR

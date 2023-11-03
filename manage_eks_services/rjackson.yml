@@ -16,13 +16,14 @@ eks_service_config:
   eks_worker_maxcount: 10
   eks_cidr_slash_16: 10.12.0.0/16
   eks_service_deploy: true
+  eks_delete_logs: true
 
   ### ECR repo values make true to create, false to delete it along with all images
   docker_image_name: "node-http-api"
   docker_image_name_tag: "latest"
-  clean_local_docker_image: true
-  ecr_create: false
+  keep_local_docker_image: true
+  ecr_create: true
   ecr_lifecycle_expiry_days: 3
-  ecr_push: false
+  ecr_push: true
   ecr_images_env: sandbox
  
