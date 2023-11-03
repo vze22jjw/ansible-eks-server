@@ -27,3 +27,9 @@ eks_service_config:
   ecr_lifecycle_expiry_days: 3      ### value in days for tagged ecr images to be stored, default is 30
   ecr_push: true                    ### push to an AWS ECR repository, if false local docker image is kept
   ecr_images_env: sandbox           ### ECR environment name chosen by user, default is the same value as eks_repo_env OR sandbox
+
+  ## future CI/CD -- Can be used to fetch upstream files to be buld and deployed with this repo.
+  eks_docker_file_repo: "https://github.com/user/docker-goodness"
+  eks_docker_file_repo_branch: trunk
+  eks_micrservices_file_repo: "https://github.com/user/docker-goodness"
+  eks_micrservices_file_repo_brnanch: main
