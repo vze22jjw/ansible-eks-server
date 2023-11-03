@@ -61,6 +61,11 @@
         push: "{{ ecr_push|bool }}"
         tag: "{{ docker_image_name }}-{{ docker_image_name_tag }}"
 
+    - name: wait for ecr scan to complete before continue
+      shell: >
+        aws ecr wait image-scan-complete --repository-name "{{ eks_repo_env }}/{{ ecr_repo_name }}" --image-id imageTag="{{ docker_image_name }}-{{ docker_image_name_tag }}"    
+      when: ecr_create
+
     - name: Remove image from local repo
       community.docker.docker_image:
         name: "{{ ecr_url }}"
